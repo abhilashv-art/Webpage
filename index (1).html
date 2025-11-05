@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SubsNDubs Demo</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        #video-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        #original-video-container,
+        #dubbed-video-container {
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        video {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Digital Nirvana</h1>
+    <h2>SubsNDubs Demo</h2>
+    <div id="video-container">
+        <div id="original-video-container">
+            <h3>Original Video</h3>
+            <video id="original-video" controls>
+                <source src="original_video.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        <div id="dubbed-video-container">
+            <h3>Dubbed Video</h3>
+            <video id="dubbed-video" controls>
+                <source src="dubbed_video.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </div>
+
+    <script>
+        const originalVideo = document.getElementById('original-video');
+        const dubbedVideo = document.getElementById('dubbed-video');
+
+        originalVideo.addEventListener('play', () => {
+            if (!dubbedVideo.paused) {
+                dubbedVideo.pause();
+            }
+        });
+
+        dubbedVideo.addEventListener('play', () => {
+            if (!originalVideo.paused) {
+                originalVideo.pause();
+            }
+        });
+    </script>
+</body>
+</html>
