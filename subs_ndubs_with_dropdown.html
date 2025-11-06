@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Digital Nirvana — SubsNDubs (Category Selector)</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#00b4d8;--glass: rgba(255,255,255,0.04)}
+    *{box-sizing:border-box;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
+    body{margin:0;min-height:100vh;background:linear-gradient(180deg,#061021 0%, #071829 100%);color:#e6eef6}
+    .wrap{max-width:1200px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;gap:16px}
+    .logo{width:54px;height:54px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:4px 0 18px;color:var(--muted)}
+
+    .selector{display:flex;gap:12px;align-items:center;margin-top:14px}
+    select{padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:var(--muted)}
+    .players{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+    .player-card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .player-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    video{width:100%;border-radius:8px;background:black}
+
+    .sync-bar{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .bottom-controls{display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+    .status{color:var(--muted);font-size:13px}
+    .note{font-size:13px;color:var(--muted)}
+    footer{margin-top:28px;color:var(--muted);font-size:13px}
+
+    @media (max-width:900px){.players{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">DN</div>
+      <div>
+        <h1>Digital Nirvana — <span style="color:var(--accent)">SubsNDubs</span> Demo</h1>
+        <p class="lead">Select a content category to automatically load the matching original and dubbed videos from the same folder.</p>
+      </div>
+    </header>
+
+    <div class="selector" role="region" aria-label="Category selector">
+      <label for="category" class="note">Choose category:</label>
+      <select id="category">
+        <option value="webseries">Web Series — English → Spanish</option>
+        <option value="social">Social Media — English → French</option>
+        <option value="movie">Movie — English → Mandarin</option>
+        <option value="worship">House of Worship — English → Spanish</option>
+        <option value="edtech">Ed Tech — English → Arabic</option>
+      </select>
+      <label class="note">Auto-play: <input id="autoplay" type="checkbox" checked /></label>
+      <button id="loadBtn">Load & Play</button>
+    </div>
+
+    <section class="players">
+      <div class="player-card">
+        <div class="player-title"><strong>Original (English)</strong><span id="origName" class="note"></span></div>
+        <video id="origVideo" controls crossorigin="anonymous" preload="metadata">
+          <source id="origSource" src="webseries_original.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+
+      <div class="player-card">
+        <div class="player-title"><strong>Dubbed</strong><span id="dubName" class="note"></span></div>
+        <video id="dubVideo" controls crossorigin="anonymous" preload="metadata">
+          <source id="dubSource" src="webseries_dubbed_spanish.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    </section>
+
+    <div class="bottom-controls">
+      <div class="status" id="status">Select a category and click Load & Play.</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="syncBtn">Sync Now</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;color:var(--muted)">
+      <strong>Filename conventions (place in same folder as this HTML):</strong>
+      <ul>
+        <li>Web Series: <code>webseries_original.mp4</code> / <code>webseries_dubbed_spanish.mp4</code></li>
+        <li>Social Media: <code>social_original.mp4</code> / <code>social_dubbed_french.mp4</code></li>
+        <li>Movie: <code>movie_original.mp4</code> / <code>movie_dubbed_mandarin.mp4</code></li>
+        <li>House of Worship: <code>worship_original.mp4</code> / <code>worship_dubbed_spanish.mp4</code></li>
+        <li>Ed Tech: <code>edtech_original.mp4</code> / <code>edtech_dubbed_arabic.mp4</code></li>
+      </ul>
+    </div>
+
+    <footer>
+      Tip: For local testing serve the folder (e.g. <code>python -m http.server 8000</code>). Filenames are case-sensitive on many servers.
+    </footer>
+  </div>
+
+  <script>
+    // Mapping of categories to filenames and friendly labels
+    const videoMap = {
+      webseries: { original: 'webseries_original.mp4', dubbed: 'webseries_dubbed_spanish.mp4', dubLang: 'Spanish' },
+      social:   { original: 'social_original.mp4',    dubbed: 'social_dubbed_french.mp4',    dubLang: 'French' },
+      movie:    { original: 'movie_original.mp4',     dubbed: 'movie_dubbed_mandarin.mp4',  dubLang: 'Mandarin' },
+      worship:  { original: 'worship_original.mp4',   dubbed: 'worship_dubbed_spanish.mp4', dubLang: 'Spanish' },
+      edtech:   { original: 'edtech_original.mp4',    dubbed: 'edtech_dubbed_arabic.mp4',   dubLang: 'Arabic' }
+    };
+
+    const category = document.getElementById('category');
+    const loadBtn = document.getElementById('loadBtn');
+    const autoplay = document.getElementById('autoplay');
+    const origVideo = document.getElementById('origVideo');
+    const dubVideo = document.getElementById('dubVideo');
+    const origSource = document.getElementById('origSource');
+    const dubSource = document.getElementById('dubSource');
+    const status = document.getElementById('status');
+    const origName = document.getElementById('origName');
+    const dubName = document.getElementById('dubName');
+
+    function setStatus(msg){ status.textContent = msg; }
+
+    function loadCategory(catKey){
+      const m = videoMap[catKey];
+      if(!m){ setStatus('Unknown category'); return; }
+
+      origSource.src = m.original;
+      dubSource.src = m.dubbed;
+      origName.textContent = ' ' + m.original;
+      dubName.textContent = ' ' + m.dubbed + ' (' + m.dubLang + ')';
+
+      // reload players
+      origVideo.load(); dubVideo.load();
+
+      setStatus(`Loaded files for ${catKey}.`);
+
+      // autoplay if requested
+      if(autoplay.checked){
+        Promise.all([origVideo.play().catch(() => {}), dubVideo.play().catch(() => {})]);
+      }
+    }
+
+    // initial load of default selection
+    loadCategory(category.value);
+
+    loadBtn.addEventListener('click', ()=> loadCategory(category.value));
+
+    // sync button: set dubbed to original time
+    document.getElementById('syncBtn').addEventListener('click', ()=>{
+      dubVideo.currentTime = origVideo.currentTime;
+      setStatus('Synchronized at ' + origVideo.currentTime.toFixed(2) + 's');
+    });
+
+    // mirror play/pause
+    origVideo.addEventListener('play', ()=> dubVideo.play().catch(()=>{}));
+    origVideo.addEventListener('pause', ()=> dubVideo.pause());
+
+    // drift correction while both playing
+    setInterval(()=>{
+      if(origVideo.paused || dubVideo.paused) return;
+      const drift = Math.abs(origVideo.currentTime - dubVideo.currentTime);
+      if(drift > 0.25) dubVideo.currentTime = origVideo.currentTime;
+      setStatus(`Original: ${origVideo.currentTime.toFixed(2)}s | Dubbed: ${dubVideo.currentTime.toFixed(2)}s`);
+    }, 400);
+
+    // helpful error handlers
+    origVideo.addEventListener('error', ()=> setStatus('Error loading ' + (origSource.src || origSource.getAttribute('src'))));
+    dubVideo.addEventListener('error', ()=> setStatus('Error loading ' + (dubSource.src || dubSource.getAttribute('src'))));
+  </script>
+</body>
+</html>
