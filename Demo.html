@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Digital Nirvana — SubsNDubs Demo (Diagnostics)</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#00b4d8;--glass: rgba(255,255,255,0.04)}
+    *{box-sizing:border-box;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
+    body{margin:0;min-height:100vh;background:linear-gradient(180deg,#061021 0%, #071829 100%);color:#e6eef6}
+    .wrap{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;gap:16px}
+    .logo{width:54px;height:54px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:4px 0 18px;color:var(--muted)}
+
+    .players{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+    .player-card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .player-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    video{width:100%;border-radius:8px;background:black}
+
+    .sync-bar{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .bottom-controls{display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+    .status{color:var(--muted);font-size:13px}
+    .diag{margin-top:10px;padding:12px;border-radius:8px;background:rgba(255,255,255,0.02);color:var(--muted);font-size:13px}
+    .error{color:#ffb4b4}
+    footer{margin-top:28px;color:var(--muted);font-size:13px}
+
+    @media (max-width:900px){.players{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">DN</div>
+      <div>
+        <h1>Digital Nirvana — <span style="color:var(--accent)">SubsNDubs</span> Demo</h1>
+        <p class="lead">This page loads two hard-coded files from the same folder: <code>original_video.mp4</code> and <code>dubbed_video.mp4</code>. Diagnostics are provided below to help if the files don't load.</p>
+      </div>
+    </header>
+
+    <section class="players">
+      <div class="player-card" id="srcCard">
+        <div class="player-title">
+          <strong>Original Video</strong>
+        </div>
+        <video id="srcVideo" controls crossorigin="anonymous" preload="metadata">
+          <source id="srcSource" src="original_video.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+        <div class="sync-bar">
+          <label class="small">Volume</label>
+          <input id="srcVol" type="range" min="0" max="1" step="0.01" value="1" />
+        </div>
+      </div>
+
+      <div class="player-card" id="dubCard">
+        <div class="player-title">
+          <strong>Dubbed Video</strong>
+        </div>
+        <video id="dubVideo" controls crossorigin="anonymous" preload="metadata">
+          <source id="dubSource" src="dubbed_video.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+        <div class="sync-bar">
+          <label class="small">Volume</label>
+          <input id="dubVol" type="range" min="0" max="1" step="0.01" value="1" />
+        </div>
+      </div>
+    </section>
+
+    <div class="bottom-controls">
+      <div class="status" id="status">Initializing diagnostics...</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="syncNow" class="ghost">Sync Now</button>
+      </div>
+    </div>
+
+    <div class="diag" id="diag">
+      <strong>Diagnostics:</strong>
+      <ul id="diagList">
+        <li>Checking file availability...</li>
+      </ul>
+    </div>
+
+    <footer>
+      Tips: If files don't load, (1) ensure filenames exactly match and are in the same folder, (2) serve via a local server (`python -m http.server 8000`), or (3) upload the files to a web-accessible URL and adjust the sources.
+    </footer>
+  </div>
+
+  <script>
+    const srcVideo = document.getElementById('srcVideo');
+    const dubVideo = document.getElementById('dubVideo');
+    const srcSource = document.getElementById('srcSource');
+    const dubSource = document.getElementById('dubSource');
+    const srcVol = document.getElementById('srcVol');
+    const dubVol = document.getElementById('dubVol');
+    const status = document.getElementById('status');
+    const diagList = document.getElementById('diagList');
+
+    function addDiag(msg, isError=false){
+      const li = document.createElement('li');
+      li.textContent = msg;
+      if(isError) li.classList.add('error');
+      diagList.appendChild(li);
+    }
+
+    function clearDiags(){ diagList.innerHTML = ''; }
+
+    async function checkFile(url){
+      // Try HEAD first - works for http(s). For file:// this will fail.
+      try{
+        const resp = await fetch(url, { method: 'HEAD' });
+        return { ok: resp.ok, status: resp.status };
+      }catch(e){
+        // network error or CORS or file:// — fall back to attempting to load metadata on the video element
+        return { ok: false, status: null, error: e };
+      }
+    }
+
+    async function runDiagnostics(){
+      clearDiags();
+      setStatus('Running diagnostics — attempting to detect video availability...');
+
+      const baseHint = window.location.href.split('?')[0];
+      addDiag('Page URL: ' + baseHint);
+      addDiag('Looking for files: original_video.mp4 and dubbed_video.mp4 in same folder as this HTML.');
+
+      const srcUrl = srcSource.getAttribute('src');
+      const dubUrl = dubSource.getAttribute('src');
+
+      // Try HEAD fetch
+      addDiag('Attempting HTTP HEAD for ' + srcUrl);
+      const a = await checkFile(srcUrl);
+      if(a.ok){ addDiag('Found original_video.mp4 (HTTP ' + a.status + ')'); }
+      else{ addDiag('Could not verify original_video.mp4 via HTTP HEAD. It may be missing, blocked by CORS, or you are opening the file using file:// protocol.','error'); }
+
+      addDiag('Attempting HTTP HEAD for ' + dubUrl);
+      const b = await checkFile(dubUrl);
+      if(b.ok){ addDiag('Found dubbed_video.mp4 (HTTP ' + b.status + ')'); }
+      else{ addDiag('Could not verify dubbed_video.mp4 via HTTP HEAD. It may be missing, blocked by CORS, or you are opening the file using file:// protocol.','error'); }
+
+      addDiag('If HEAD failed but files are present locally, try serving the folder via a local server (recommended).');
+
+      // attach error event listeners to video elements
+      srcVideo.addEventListener('error', (ev)=>{
+        addDiag('Original video failed to load: code=' + srcVideo.error.code, true);
+        addDiag('Suggested fix: ensure file is present, check filename case-sensitivity, and serve via http(s).', true);
+        setStatus('Error loading original_video.mp4');
+      });
+      dubVideo.addEventListener('error', (ev)=>{
+        addDiag('Dubbed video failed to load: code=' + dubVideo.error.code, true);
+        addDiag('Suggested fix: ensure file is present, check filename case-sensitivity, and serve via http(s).', true);
+        setStatus('Error loading dubbed_video.mp4');
+      });
+
+      // metadata loaded listeners
+      srcVideo.addEventListener('loadedmetadata', ()=>{
+        addDiag('Original metadata loaded — duration: ' + (isNaN(srcVideo.duration)?'N/A':srcVideo.duration.toFixed(2)+'s'));
+        setStatus('Original ready');
+      });
+      dubVideo.addEventListener('loadedmetadata', ()=>{
+        addDiag('Dubbed metadata loaded — duration: ' + (isNaN(dubVideo.duration)?'N/A':dubVideo.duration.toFixed(2)+'s'));
+        setStatus('Dubbed ready');
+      });
+
+      // Try to load metadata programmatically — helpful when fetch HEAD fails due to CORS or file://
+      try{
+        await Promise.all([srcVideo.play().then(()=>srcVideo.pause()).catch(()=>{}), dubVideo.play().then(()=>dubVideo.pause()).catch(()=>{})]);
+      }catch(e){ /* ignore */ }
+
+      addDiag('Diagnostics complete. See above messages for next steps.');
+    }
+
+    // Basic controls
+    srcVol.addEventListener('input', ()=> srcVideo.volume = parseFloat(srcVol.value));
+    dubVol.addEventListener('input', ()=> dubVideo.volume = parseFloat(dubVol.value));
+
+    document.getElementById('syncNow').addEventListener('click', ()=>{
+      dubVideo.currentTime = srcVideo.currentTime;
+      setStatus('Synchronized at ' + srcVideo.currentTime.toFixed(2) + 's');
+    });
+
+    // play-pause mirror
+    srcVideo.addEventListener('play', ()=> dubVideo.play().catch(()=>{}));
+    srcVideo.addEventListener('pause', ()=> dubVideo.pause());
+
+    // drift correction
+    setInterval(()=>{
+      if(srcVideo.paused || dubVideo.paused) return;
+      const drift = Math.abs(srcVideo.currentTime - dubVideo.currentTime);
+      if(drift > 0.25) dubVideo.currentTime = srcVideo.currentTime;
+      setStatus(`Original: ${srcVideo.currentTime.toFixed(2)}s | Dubbed: ${dubVideo.currentTime.toFixed(2)}s`);
+    }, 500);
+
+    // kick off diagnostics after small delay to let browser settle
+    setTimeout(runDiagnostics, 250);
+  </script>
+</body>
+</html>
